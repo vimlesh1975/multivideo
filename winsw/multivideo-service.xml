@@ -1,0 +1,19 @@
+<service>
+  <id>multivideo-casparcg</id>
+  <name>Multivideo CasparCG Controller</name>
+  <description>Next.js control surface for playing and resizing videos on a CasparCG channel.</description>
+  
+  <!-- Use node.exe from the system. It must be in the PATH. -->
+  <executable>node.exe</executable>
+  
+  <!-- Path to the standalone server.js relative to the service installation root -->
+  <arguments>server.js</arguments>
+  
+  <log mode="roll"></log>
+  
+  <env name="NODE_ENV" value="production"/>
+  <env name="PORT" value="15000"/>
+  <env name="HOSTNAME" value="127.0.0.1"/>
+
+  <onfailure action="restart" delay="10 sec"/>
+</service>

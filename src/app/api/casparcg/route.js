@@ -22,6 +22,14 @@ function formatMixerNumber(value) {
   return Number(value).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+function stripExtension(filename) {
+  if (typeof filename !== "string") {
+    return filename;
+  }
+  // Removes the last dot and everything after it, but only if it's not a path separator
+  return filename.replace(/\.[^/.]+$/, "");
+}
+
 function sendAmcpCommand({ host, port, command }) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
@@ -167,34 +175,25 @@ export async function POST(request) {
     } else if (action === "stop") {
       command = `STOP ${channel}-${layer}`;
     } else if (action === "play") {
-      if (!clip.toLowerCase().endsWith(".mp4")) {
-        return Response.json(
-          { error: "Enter an MP4 file name, for example intro.mp4." },
-          { status: 400 },
-        );
-      }
-
-      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}"`;
+      const clipName = stripExtension(clip);
+      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clipName)}"`;
     } else if (action === "playLoop") {
-      if (!clip.toLowerCase().endsWith(".mp4")) {
-        return Response.json(
-          { error: "Enter an MP4 file name, for example intro.mp4." },
-          { status: 400 },
-        );
-      }
-
-      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}" LOOP`;
+      const clipName = stripExtension(clip);
+      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clipName)}" LOOP`;
     } else if (action === "fill") {
       command = getFillCommand(channel, layer, box);
     } else if (action === "playAllLoop") {
       const videos = Array.isArray(body.videos) ? body.videos : [];
       const playableVideos = videos.filter((video) =>
-        String(video.clip || "").trim().toLowerCase().endsWith(".mp4"),
+        String(video.clip || "").trim() !== "",
       );
 
       if (playableVideos.length === 0) {
         return Response.json(
-          { error: "Choose at least one MP4 before playing all." },
+          {
+            error:
+              "Enter at least one media name or full path before playing all.",
+          },
           { status: 400 },
         );
       }
@@ -207,8 +206,9 @@ export async function POST(request) {
       const playCommands = playableVideos.map((video) => {
         const videoLayer = parsePositiveInteger(video.layer, 1);
         const videoClip = String(video.clip || "").trim();
+        const clipName = stripExtension(videoClip);
 
-        return `PLAY ${channel}-${videoLayer} "${escapeAmcpValue(videoClip)}" LOOP`;
+        return `PLAY ${channel}-${videoLayer} "${escapeAmcpValue(clipName)}" LOOP`;
       });
       const commands = [...fillCommands, ...playCommands];
 

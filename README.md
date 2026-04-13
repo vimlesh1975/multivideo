@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Multivideo CasparCG Controller
 
-## Getting Started
+A compact Next.js control surface for playing, positioning, and resizing three MP4 videos on a CasparCG channel.
 
-First, run the development server:
+The app talks to CasparCG over AMCP using a server-side TCP route, so browser actions such as Play, Stop, drag, resize, Save File, and Open File become CasparCG commands.
+
+## Features
+
+- Three independent MP4 slots.
+- Default files:
+  - `go1080p25.mp4`
+  - `amb.mp4`
+  - `CG1080i50.mp4`
+- Play and Stop controls for each video layer.
+- Play All Loop and Stop All controls.
+- 1920 x 1080 visual surface.
+- Drag video blocks to move them in CasparCG.
+- Resize video blocks with corner and edge handles.
+- Live position updates using `MIXER FILL`.
+- Auto-connect check using CasparCG `VERSION`.
+- Save the current layout to a JSON file.
+- Open a saved JSON layout file and apply saved positions.
+- Supports CasparCG media names and full MP4 paths.
+
+## CasparCG Commands Used
+
+Single video loop playback:
+
+```text
+PLAY 1-2 "c://casparcg/_media/kabhi_kabhi.mp4" LOOP
+```
+
+Position and scale:
+
+```text
+MIXER 1-2 FILL 0.1 0.1 0.4 0.4
+```
+
+Stop a layer:
+
+```text
+STOP 1-2
+```
+
+## Requirements
+
+- Node.js installed.
+- CasparCG Server running.
+- CasparCG AMCP port reachable, normally `5250`.
+- MP4 files accessible to the CasparCG machine.
+
+## Install
+
+```bash
+npm install
+```
+
+## Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://127.0.0.1:15000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build
 
-## Learn More
+```bash
+npm run build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## How To Use
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Start CasparCG Server.
+2. Open the app in your browser.
+3. Confirm the Host and Port at the bottom left.
+4. Enter an MP4 media name or full path for each video.
+5. Click Play for one video, or Play All Loop for all three.
+6. Drag and resize blocks on the 1920 x 1080 surface.
+7. Click Stop for one video, or Stop All for all three.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Full Path Playback
 
-## Deploy on Vercel
+You can type a full CasparCG-readable path directly in the video field:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+c://casparcg/_media/kabhi_kabhi.mp4
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The app sends that path directly to CasparCG inside the `PLAY` command.
+
+Important: the browser file picker cannot provide the full local path for security reasons. The Choose button can fill the file name only. For files outside the CasparCG media folder, type or paste the full path manually.
+
+## Save And Open Layouts
+
+Use Save File to download a JSON layout file containing:
+
+- Host and port.
+- Selected MP4 names or paths.
+- Video block positions and sizes.
+- Selected video block.
+
+Use Open File to load that JSON layout again. The app restores the UI state and applies saved positions to CasparCG.
+
+## Default Layer Mapping
+
+The app uses CasparCG channel `1` and these layers:
+
+- Video 1: layer `1`
+- Video 2: layer `2`
+- Video 3: layer `3`
+
+For example, Video 2 plays on:
+
+```text
+1-2
+```
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+```
+
+## Notes
+
+- This app is intended to run locally on the control machine or on the same network as CasparCG.
+- CasparCG must be able to access the MP4 path you enter.
+- Dragging and resizing updates CasparCG live, throttled to avoid sending too many AMCP commands.

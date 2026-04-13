@@ -15,21 +15,21 @@ const defaultVideos = [
     label: "Video 1",
     layer: "1",
     clip: "go1080p25.mp4",
-    box: { x: 0.08, y: 0.08, width: 0.42, height: 0.42 },
+    box: { x: 0, y: 0, width: 6 / 14, height: 1 },
   },
   {
     id: "video-2",
     label: "Video 2",
     layer: "2",
     clip: "amb.mp4",
-    box: { x: 0.5, y: 0.5, width: 0.36, height: 0.36 },
+    box: { x: 6 / 14, y: 0, width: 2 / 14, height: 1 },
   },
   {
     id: "video-3",
     label: "Video 3",
     layer: "3",
     clip: "CG1080i50.mp4",
-    box: { x: 0.34, y: 0.28, width: 0.32, height: 0.32 },
+    box: { x: 8 / 14, y: 0, width: 6 / 14, height: 1 },
   },
 ];
 
@@ -336,34 +336,59 @@ export default function Home() {
     }
   }
 
-  function saveStateFile() {
-    const stateFile = new Blob(
-      [
-        JSON.stringify(
-          {
-            app: "multivideo-casparcg",
-            savedAt: new Date().toISOString(),
-            version: 1,
-            connection,
-            videos,
-            selectedVideoId,
-          },
-          null,
-          2,
-        ),
-      ],
-      { type: "application/json" },
-    );
-    const url = URL.createObjectURL(stateFile);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `multivideo-layout-${new Date()
+  async function saveStateFile() {
+    const suggestedName = `multivideo-layout-${new Date()
       .toISOString()
       .slice(0, 19)
       .replaceAll(":", "-")}.json`;
+    const stateFile = JSON.stringify(
+      {
+        app: "multivideo-casparcg",
+        savedAt: new Date().toISOString(),
+        version: 1,
+        connection,
+        videos,
+        selectedVideoId,
+      },
+      null,
+      2,
+    );
+
+    if ("showSaveFilePicker" in window) {
+      try {
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName,
+          types: [
+            {
+              description: "Multivideo layout",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+        });
+        const writable = await fileHandle.createWritable();
+        await writable.write(stateFile);
+        await writable.close();
+        setStatus("Saved layout file.");
+        return;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          setStatus("Save cancelled.");
+          return;
+        }
+
+        setStatus(`Could not save layout file: ${error.message}`);
+        return;
+      }
+    }
+
+    const stateBlob = new Blob([stateFile], { type: "application/json" });
+    const url = URL.createObjectURL(stateBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = suggestedName;
     link.click();
     URL.revokeObjectURL(url);
-    setStatus("Saved layout file.");
+    setStatus("Saved layout file to browser downloads.");
   }
 
   async function applyStateFile(parsedState) {
@@ -379,31 +404,25 @@ export default function Home() {
     setConnection(nextConnection);
     setVideos(nextVideos);
     setSelectedVideoId(nextSelectedVideoId);
-    setStatus("Opened layout file. Applying positions...");
+    setStatus("Opened layout file. Sending saved videos and positions...");
 
-    const responses = await Promise.all(
-      nextVideos.map((video) =>
-        fetch("/api/casparcg", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "fill",
-            ...nextConnection,
-            layer: video.layer,
-            clip: video.clip,
-            box: video.box,
-          }),
-        }),
-      ),
-    );
-    const failedResponse = responses.find((response) => !response.ok);
+    const response = await fetch("/api/casparcg", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "playAllLoop",
+        ...nextConnection,
+        videos: nextVideos,
+      }),
+    });
 
-    if (failedResponse) {
-      const result = await failedResponse.json();
-      throw new Error(result.error || "Could not apply saved positions.");
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || "Could not play saved layout.");
     }
 
-    setStatus("Opened layout file.");
+    const result = await response.json();
+    setStatus(`Opened layout file.\n\n${result.message}`);
   }
 
   async function openStateFile(event) {
@@ -521,14 +540,14 @@ export default function Home() {
                 <div className={styles.mediaRow}>
                   <label className={styles.mediaName}>
                     <span className={styles.visuallyHidden}>
-                      {video.label} MP4 file or media name
+                      {video.label} CasparCG MP4 path or media name
                     </span>
                     <input
                       value={video.clip}
                       onChange={(event) =>
                         updateVideo(video.id, { clip: event.target.value })
                       }
-                      placeholder="example: intro.mp4"
+                      placeholder="kabhi_kabhi.mp4 or c://casparcg/_media/video.mkv"
                     />
                   </label>
 
@@ -537,7 +556,7 @@ export default function Home() {
                     <input
                       className={styles.hiddenFileInput}
                       type="file"
-                      accept="video/mp4,.mp4"
+                      accept="*/*"
                       onChange={(event) => pickFile(event, video.id)}
                     />
                   </label>
