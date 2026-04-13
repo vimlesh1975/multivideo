@@ -227,6 +227,8 @@ export async function POST(request) {
       return Response.json({
         message: `Sent:\n${commands.join("\n")}\n\nCasparCG replied:\n${reply}`,
       });
+    } else if (action === "cls") {
+      command = "CLS";
     } else {
       return Response.json({ error: "Unknown action." }, { status: 400 });
     }

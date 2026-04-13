@@ -90,12 +90,51 @@ function normalizeSavedVideos(savedVideos) {
   });
 }
 
+function parseClsToTree(output) {
+  const lines = output.split(/\r?\n/);
+  const paths = [];
+  for (const line of lines) {
+    const match = line.match(/"([^"]+)"/);
+    if (match) {
+      paths.push(match[1]);
+    }
+  }
+
+  const root = { name: "Media", children: {}, type: "folder" };
+
+  paths.sort().forEach((path) => {
+    // Split by / or \
+    const parts = path.split(/[/\\]/);
+    let current = root;
+
+    parts.forEach((part, index) => {
+      const isFile = index === parts.length - 1;
+      if (isFile) {
+        current.children[part] = { name: part, type: "file", path: path };
+      } else {
+        if (!current.children[part]) {
+          current.children[part] = {
+            name: part,
+            type: "folder",
+            children: {},
+          };
+        }
+        current = current.children[part];
+      }
+    });
+  });
+
+  return root;
+}
+
 export default function Home() {
   const [connection, setConnection] = useState(defaultConnection);
   const [videos, setVideos] = useState(defaultVideos);
   const [selectedVideoId, setSelectedVideoId] = useState(defaultVideos[0].id);
   const [status, setStatus] = useState("Ready to connect.");
   const [isBusy, setIsBusy] = useState(false);
+  const [mediaTree, setMediaTree] = useState(null);
+  const [expandedFolders, setExpandedFolders] = useState(new Set(["Media"]));
   const stageRef = useRef(null);
   const interactionRef = useRef(null);
   const lastLiveSendRef = useRef(0);
@@ -125,6 +164,7 @@ export default function Home() {
         }
 
         setStatus(`Auto connected.\n\n${result.message}`);
+        fetchMediaList();
       } catch (error) {
         if (error.name !== "AbortError") {
           setStatus(`Auto connect failed: ${error.message}`);
@@ -137,6 +177,47 @@ export default function Home() {
       controller.abort();
     };
   }, [host, port, channel]);
+
+  async function fetchMediaList() {
+    try {
+      const response = await fetch("/api/casparcg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "cls",
+          ...connection,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not fetch media list.");
+      }
+
+      const tree = parseClsToTree(result.message);
+      setMediaTree(tree);
+    } catch (error) {
+      console.error("Failed to fetch media list:", error);
+    }
+  }
+
+  function toggleFolder(folderPath) {
+    setExpandedFolders((current) => {
+      const next = new Set(current);
+      if (next.has(folderPath)) {
+        next.delete(folderPath);
+      } else {
+        next.add(folderPath);
+      }
+      return next;
+    });
+  }
+
+  function selectMedia(mediaPath) {
+    if (selectedVideoId) {
+      updateVideo(selectedVideoId, { clip: mediaPath });
+    }
+  }
 
   function updateConnection(event) {
     setConnection((current) => ({
@@ -678,7 +759,77 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        <aside className={styles.mediaSidebar}>
+          <div className={styles.mediaExplorerHeader}>
+            <p>Media Explorer</p>
+            <button
+              type="button"
+              className={styles.refreshButton}
+              onClick={fetchMediaList}
+              title="Refresh Media List"
+            >
+              🔄
+            </button>
+          </div>
+          <div className={styles.mediaTreeContainer}>
+            {mediaTree ? (
+              <TreeItem
+                item={mediaTree}
+                level={0}
+                path="Media"
+                expandedFolders={expandedFolders}
+                onToggle={toggleFolder}
+                onSelect={selectMedia}
+              />
+            ) : (
+              <p className={styles.noMedia}>Connecting to CasparCG...</p>
+            )}
+          </div>
+        </aside>
       </section>
     </main>
+  );
+}
+
+function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect }) {
+  const isExpanded = expandedFolders.has(path);
+  const hasChildren = item.children && Object.keys(item.children).length > 0;
+
+  return (
+    <div className={styles.treeItemWrapper}>
+      <div
+        className={`${styles.treeItem} ${
+          item.type === "folder" ? styles.folderItem : styles.fileItem
+        }`}
+        style={{ paddingLeft: `${level * 12 + 8}px` }}
+        onClick={() =>
+          item.type === "folder" ? onToggle(path) : onSelect(item.path)
+        }
+      >
+        <span className={styles.expander}>
+          {item.type === "folder" ? (isExpanded ? "−" : "+") : ""}
+        </span>
+        <span className={styles.itemIcon}>
+          {item.type === "folder" ? (isExpanded ? "📂" : "📁") : "🎬"}
+        </span>
+        <span className={styles.itemName}>{item.name}</span>
+      </div>
+      {item.type === "folder" && isExpanded && hasChildren && (
+        <div className={styles.treeSubItems}>
+          {Object.entries(item.children).map(([name, child]) => (
+            <TreeItem
+              key={name}
+              item={child}
+              level={level + 1}
+              path={`${path}/${name}`}
+              expandedFolders={expandedFolders}
+              onToggle={onToggle}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
