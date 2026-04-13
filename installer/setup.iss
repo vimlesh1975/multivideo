@@ -13,7 +13,7 @@ PrivilegesRequired=admin
 
 [Files]
 ; Standalone build contents (from .next/standalone after running 'npm run build')
-Source: "..\.next\standalone\*"; DestDir: "{app}"; Flags: igonreversion recursesubdirs createallsubdirs
+Source: "..\.next\standalone\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Static and public files (must be copied manually in standalone mode)
 Source: "..\.next\static\*"; DestDir: "{app}\.next\static"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubdirs createallsubdirs

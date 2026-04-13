@@ -1,0 +1,22 @@
+{
+  "name": "multivideo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 15000",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1 --port 15000",
+    "lint": "eslint",
+    "service:prepare": "npm run build && npm run winsw:download",
+    "winsw:download": "powershell ./winsw/download-winsw.ps1"
+  },
+  "dependencies": {
+    "next": "16.2.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3"
+  }
+}
