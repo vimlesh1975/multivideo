@@ -1,4 +1,5 @@
 import net from "node:net";
+import { setMediaRoot } from "../../../lib/casparcgMediaRoot";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,50 @@ function parseMixerNumber(value, fallback) {
 
 function formatMixerNumber(value) {
   return Number(value).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function parseInfoPaths(output) {
+  const lines = String(output || "").split(/\r?\n/);
+  const paths = {};
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const cleaned = trimmed.replace(/^\d{3}\s*/, "").trim();
+
+    if (!cleaned.includes(":")) {
+      continue;
+    }
+
+    const [rawKey, ...rawValue] = cleaned.split(":");
+    const key = rawKey.trim().toLowerCase();
+    const value = rawValue.join(":").trim();
+
+    if (value) {
+      paths[key] = value;
+    }
+  }
+
+  return paths;
+}
+
+function findPreferredMediaRoot(paths) {
+  const candidates = [
+    "root",
+    "media",
+    "root folder",
+    "media folder",
+    "paths root",
+    "media root",
+  ];
+
+  for (const candidate of candidates) {
+    if (paths[candidate]) {
+      return paths[candidate];
+    }
+  }
+
+  const firstValue = Object.values(paths).find((value) => typeof value === "string" && value.length > 0);
+  return firstValue || null;
 }
 
 function isImage(filename) {
@@ -227,6 +272,8 @@ export async function POST(request) {
       return Response.json({
         message: `Sent:\n${commands.join("\n")}\n\nCasparCG replied:\n${reply}`,
       });
+    } else if (action === "paths") {
+      command = "INFO PATHS";
     } else if (action === "cls") {
       command = "CLS";
     } else {
@@ -234,6 +281,18 @@ export async function POST(request) {
     }
 
     const reply = await sendAmcpCommand({ host, port, command });
+
+    if (action === "paths") {
+      const paths = parseInfoPaths(reply);
+      const rootPath = findPreferredMediaRoot(paths);
+      const validRoot = rootPath && setMediaRoot(rootPath) ? rootPath : null;
+
+      return Response.json({
+        message: `Sent: ${command}\n\nCasparCG replied:\n${reply}`,
+        paths,
+        root: validRoot,
+      });
+    }
 
     return Response.json({
       message: `Sent: ${command}\n\nCasparCG replied:\n${reply}`,

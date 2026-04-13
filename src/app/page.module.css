@@ -8,10 +8,11 @@
 
 .panel {
   width: min(1920px, 100vw);
+  max-width: 1920px;
   height: min(1080px, 100vh);
   min-height: 720px;
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 280px;
+  grid-template-columns: 280px 320px minmax(0, 1fr);
   gap: 16px;
   overflow: hidden;
   padding: 14px;
@@ -23,6 +24,8 @@
 
 .sidebar {
   min-height: 0;
+  width: 320px;
+  max-width: 320px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   gap: 8px;
@@ -96,6 +99,8 @@
 }
 
 .videoCard {
+  width: 100%;
+  max-width: 100%;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 3px 5px;
@@ -138,19 +143,6 @@
   white-space: nowrap;
 }
 
-.panel .chooseButton {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-width: 66px;
-  min-height: 31px;
-  padding: 6px 8px;
-  color: #ffffff;
-  background: #233342;
-  border-radius: 4px;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
 
 .hiddenFileInput {
   position: absolute;
@@ -179,13 +171,13 @@
 }
 
 .cardActions {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
 }
 
 .cardActions button {
-  flex: 1 1 0;
+  min-width: 0;
   white-space: nowrap;
 }
 
@@ -236,7 +228,7 @@
   display: flex;
   align-items: center;
   justify-content: end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
 }
 
@@ -250,6 +242,8 @@
   background: #233342;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
+  flex: none;
 }
 
 .surfaceActions button.loopButton {
@@ -446,6 +440,8 @@
 }
 
 .mediaSidebar {
+  width: 280px;
+  max-width: 280px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
@@ -470,6 +466,13 @@
   font-weight: 700;
 }
 
+.mediaRootPath {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
 .refreshButton {
   background: transparent;
   border: 0;
@@ -483,7 +486,7 @@
 }
 
 .mediaTreeContainer {
-  height: 500px;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px 0;
   background: #ffffff;
@@ -516,6 +519,7 @@
 
 .fileItem {
   color: #4a5568;
+  cursor: grab;
 }
 
 .itemIcon {

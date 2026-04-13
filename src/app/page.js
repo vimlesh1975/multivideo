@@ -90,43 +90,6 @@ function normalizeSavedVideos(savedVideos) {
   });
 }
 
-function parseClsToTree(output) {
-  const lines = output.split(/\r?\n/);
-  const paths = [];
-  for (const line of lines) {
-    const match = line.match(/"([^"]+)"/);
-    if (match) {
-      paths.push(match[1]);
-    }
-  }
-
-  const root = { name: "Media", children: {}, type: "folder" };
-
-  paths.sort().forEach((path) => {
-    // Split by / or \
-    const parts = path.split(/[/\\]/);
-    let current = root;
-
-    parts.forEach((part, index) => {
-      const isFile = index === parts.length - 1;
-      if (isFile) {
-        current.children[part] = { name: part, type: "file", path: path };
-      } else {
-        if (!current.children[part]) {
-          current.children[part] = {
-            name: part,
-            type: "folder",
-            children: {},
-          };
-        }
-        current = current.children[part];
-      }
-    });
-  });
-
-  return root;
-}
-
 export default function Home() {
   const [connection, setConnection] = useState(defaultConnection);
   const [videos, setVideos] = useState(defaultVideos);
@@ -134,6 +97,7 @@ export default function Home() {
   const [status, setStatus] = useState("Ready to connect.");
   const [isBusy, setIsBusy] = useState(false);
   const [mediaTree, setMediaTree] = useState(null);
+  const [mediaRoot, setMediaRoot] = useState(null);
   const [expandedFolders, setExpandedFolders] = useState(new Set(["Media"]));
   const stageRef = useRef(null);
   const interactionRef = useRef(null);
@@ -164,7 +128,7 @@ export default function Home() {
         }
 
         setStatus(`Auto connected.\n\n${result.message}`);
-        fetchMediaList();
+        await refreshMediaPaths();
       } catch (error) {
         if (error.name !== "AbortError") {
           setStatus(`Auto connect failed: ${error.message}`);
@@ -178,26 +142,54 @@ export default function Home() {
     };
   }, [host, port, channel]);
 
+  useEffect(() => {
+    fetchMediaList();
+  }, []);
+
   async function fetchMediaList() {
     try {
-      const response = await fetch("/api/casparcg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "cls",
-          ...connection,
-        }),
-      });
+      const response = await fetch("/api/media-tree");
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(result.error || "Could not fetch media list.");
       }
 
-      const tree = parseClsToTree(result.message);
-      setMediaTree(tree);
+      setMediaTree(result.tree);
+      setMediaRoot(result.root || null);
     } catch (error) {
       console.error("Failed to fetch media list:", error);
+      setStatus(`Could not load media tree: ${error.message}`);
+    }
+  }
+
+  async function refreshMediaPaths() {
+    try {
+      const response = await fetch("/api/casparcg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "paths",
+          host,
+          port,
+          channel,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not query CasparCG paths.");
+      }
+
+      if (result.root) {
+        setMediaRoot(result.root);
+      }
+
+      await fetchMediaList();
+    } catch (error) {
+      console.error("Failed to refresh CasparCG paths:", error);
+      setStatus(`Could not refresh media paths: ${error.message}`);
     }
   }
 
@@ -217,6 +209,30 @@ export default function Home() {
     if (selectedVideoId) {
       updateVideo(selectedVideoId, { clip: mediaPath });
     }
+  }
+
+  function handleMediaDragStart(event, mediaPath) {
+    event.dataTransfer.setData("text/plain", mediaPath);
+    event.dataTransfer.effectAllowed = "copy";
+  }
+
+  function handleVideoDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleVideoDrop(event, videoId) {
+    event.preventDefault();
+    const mediaPath =
+      event.dataTransfer.getData("text/plain") ||
+      event.dataTransfer.getData("text/uri-list");
+
+    if (!mediaPath) {
+      return;
+    }
+
+    updateVideo(videoId, { clip: mediaPath });
+    setSelectedVideoId(videoId);
   }
 
   function updateConnection(event) {
@@ -605,6 +621,42 @@ export default function Home() {
   return (
     <main className={styles.page}>
       <section className={styles.panel}>
+        <aside className={styles.mediaSidebar}>
+          <div className={styles.mediaExplorerHeader}>
+            <div>
+              <p>Media Explorer</p>
+              {mediaRoot ? (
+                <p className={styles.mediaRootPath}>Root: {mediaRoot}</p>
+              ) : (
+                <p className={styles.mediaRootPath}>Using default local media root</p>
+              )}
+            </div>
+            <button
+              type="button"
+              className={styles.refreshButton}
+              onClick={refreshMediaPaths}
+              title="Refresh Media Paths and Tree"
+            >
+              🔄
+            </button>
+          </div>
+          <div className={styles.mediaTreeContainer}>
+            {mediaTree ? (
+              <TreeItem
+                item={mediaTree}
+                level={0}
+                path="Media"
+                expandedFolders={expandedFolders}
+                onToggle={toggleFolder}
+                onSelect={selectMedia}
+                onDragStart={handleMediaDragStart}
+              />
+            ) : (
+              <p className={styles.noMedia}>Connecting to CasparCG...</p>
+            )}
+          </div>
+        </aside>
+
         <aside className={styles.sidebar}>
           <div className={styles.header}>
             <p>CasparCG MP4 Player</p>
@@ -613,7 +665,12 @@ export default function Home() {
 
           <section className={styles.videoControls}>
             {videos.map((video) => (
-              <article className={styles.videoCard} key={video.id}>
+              <article
+                className={styles.videoCard}
+                key={video.id}
+                onDragOver={handleVideoDragOver}
+                onDrop={(event) => handleVideoDrop(event, video.id)}
+              >
                 <div className={styles.videoNumber}>
                   {video.label.replace("Video ", "")}
                 </div>
@@ -629,16 +686,6 @@ export default function Home() {
                         updateVideo(video.id, { clip: event.target.value })
                       }
                       placeholder="kabhi_kabhi.mp4 or c://casparcg/_media/video.mkv"
-                    />
-                  </label>
-
-                  <label className={styles.chooseButton}>
-                    Choose
-                    <input
-                      className={styles.hiddenFileInput}
-                      type="file"
-                      accept="*/*"
-                      onChange={(event) => pickFile(event, video.id)}
                     />
                   </label>
                 </div>
@@ -735,6 +782,8 @@ export default function Home() {
                 onPointerMove={dragBox}
                 onPointerUp={endDrag}
                 onPointerCancel={endDrag}
+                onDragOver={handleVideoDragOver}
+                onDrop={(event) => handleVideoDrop(event, video.id)}
                 style={{
                   left: `${video.box.x * 100}%`,
                   top: `${video.box.y * 100}%`,
@@ -760,39 +809,12 @@ export default function Home() {
           </div>
         </section>
 
-        <aside className={styles.mediaSidebar}>
-          <div className={styles.mediaExplorerHeader}>
-            <p>Media Explorer</p>
-            <button
-              type="button"
-              className={styles.refreshButton}
-              onClick={fetchMediaList}
-              title="Refresh Media List"
-            >
-              🔄
-            </button>
-          </div>
-          <div className={styles.mediaTreeContainer}>
-            {mediaTree ? (
-              <TreeItem
-                item={mediaTree}
-                level={0}
-                path="Media"
-                expandedFolders={expandedFolders}
-                onToggle={toggleFolder}
-                onSelect={selectMedia}
-              />
-            ) : (
-              <p className={styles.noMedia}>Connecting to CasparCG...</p>
-            )}
-          </div>
-        </aside>
       </section>
     </main>
   );
 }
 
-function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect }) {
+function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect, onDragStart }) {
   const isExpanded = expandedFolders.has(path);
   const hasChildren = item.children && Object.keys(item.children).length > 0;
 
@@ -803,6 +825,12 @@ function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect }) {
           item.type === "folder" ? styles.folderItem : styles.fileItem
         }`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
+        draggable={item.type === "file"}
+        onDragStart={
+          item.type === "file"
+            ? (event) => onDragStart?.(event, item.path)
+            : undefined
+        }
         onClick={() =>
           item.type === "folder" ? onToggle(path) : onSelect(item.path)
         }
@@ -826,6 +854,7 @@ function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect }) {
               expandedFolders={expandedFolders}
               onToggle={onToggle}
               onSelect={onSelect}
+              onDragStart={onDragStart}
             />
           ))}
         </div>
