@@ -20,6 +20,7 @@ Source: "..\public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubd
 ; WinSW wrapper and config (must run download-winsw.ps1 first)
 Source: "..\winsw\multivideo-service.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\winsw\multivideo-service.xml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\winsw\node.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
 ; Install and start the service

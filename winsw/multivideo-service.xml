@@ -3,8 +3,8 @@
   <name>Multivideo CasparCG Controller</name>
   <description>Next.js control surface for playing and resizing videos on a CasparCG channel.</description>
   
-  <!-- Use node.exe from the system. It must be in the PATH. -->
-  <executable>node.exe</executable>
+  <!-- Uses the bundled node.exe in the same folder as the service wrapper -->
+  <executable>%BASE%\node.exe</executable>
   
   <!-- Path to the standalone server.js relative to the service installation root -->
   <arguments>server.js</arguments>
