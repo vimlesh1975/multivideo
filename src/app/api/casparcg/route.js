@@ -22,6 +22,14 @@ function formatMixerNumber(value) {
   return Number(value).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+function isImage(filename) {
+  if (typeof filename !== "string") {
+    return false;
+  }
+  const imageExtensions = [".png", ".jpg", ".jpeg", ".tga", ".bmp", ".tiff"];
+  return imageExtensions.some((ext) => filename.toLowerCase().endsWith(ext));
+}
+
 function sendAmcpCommand({ host, port, command }) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
@@ -169,7 +177,8 @@ export async function POST(request) {
     } else if (action === "play") {
       command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}"`;
     } else if (action === "playLoop") {
-      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}" LOOP`;
+      const loopFlag = isImage(clip) ? "" : " LOOP";
+      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}"${loopFlag}`;
     } else if (action === "fill") {
       command = getFillCommand(channel, layer, box);
     } else if (action === "playAllLoop") {
@@ -196,8 +205,9 @@ export async function POST(request) {
       const playCommands = playableVideos.map((video) => {
         const videoLayer = parsePositiveInteger(video.layer, 1);
         const videoClip = String(video.clip || "").trim();
+        const loopFlag = isImage(videoClip) ? "" : " LOOP";
 
-        return `PLAY ${channel}-${videoLayer} "${escapeAmcpValue(videoClip)}" LOOP`;
+        return `PLAY ${channel}-${videoLayer} "${escapeAmcpValue(videoClip)}"${loopFlag}`;
       });
       const commands = [...fillCommands, ...playCommands];
 
