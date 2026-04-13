@@ -111,3 +111,47 @@
 2026-04-13 15:02:35,645 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
 2026-04-13 15:02:35,700 INFO  - Started process 27468
 2026-04-13 15:02:35,724 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:02:47,393 DEBUG - Starting WinSW in service mode
+2026-04-13 15:02:47,696 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:02:47,767 INFO  - Started process 29992
+2026-04-13 15:02:47,793 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:02:59,349 DEBUG - Starting WinSW in service mode
+2026-04-13 15:02:59,639 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:02:59,693 INFO  - Started process 30344
+2026-04-13 15:02:59,717 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:03:11,145 DEBUG - Starting WinSW in service mode
+2026-04-13 15:03:11,430 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:03:11,486 INFO  - Started process 30600
+2026-04-13 15:03:11,511 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:03:23,167 DEBUG - Starting WinSW in service mode
+2026-04-13 15:03:23,480 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:03:23,540 INFO  - Started process 29800
+2026-04-13 15:03:23,571 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:03:35,162 DEBUG - Starting WinSW in service mode
+2026-04-13 15:03:35,466 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:03:35,518 INFO  - Started process 30332
+2026-04-13 15:03:35,544 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:03:47,064 DEBUG - Starting WinSW in service mode
+2026-04-13 15:03:47,368 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:03:47,435 INFO  - Started process 28256
+2026-04-13 15:03:47,459 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:03:59,012 DEBUG - Starting WinSW in service mode
+2026-04-13 15:03:59,329 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:03:59,399 INFO  - Started process 23012
+2026-04-13 15:03:59,433 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:04:11,059 DEBUG - Starting WinSW in service mode
+2026-04-13 15:04:11,378 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:04:11,440 INFO  - Started process 23452
+2026-04-13 15:04:11,472 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:04:23,007 DEBUG - Starting WinSW in service mode
+2026-04-13 15:04:23,297 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:04:23,358 INFO  - Started process 19944
+2026-04-13 15:04:23,385 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:04:34,914 DEBUG - Starting WinSW in service mode
+2026-04-13 15:04:35,187 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:04:35,245 INFO  - Started process 30148
+2026-04-13 15:04:35,270 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
+2026-04-13 15:04:46,729 DEBUG - Starting WinSW in service mode
+2026-04-13 15:04:47,043 INFO  - Starting C:\Users\vimlesh\Desktop\multivideo\winsw\node.exe server.js
+2026-04-13 15:04:47,114 INFO  - Started process 12408
+2026-04-13 15:04:47,147 DEBUG - Forwarding logs of the process System.Diagnostics.Process (node) to WinSW.RollingLogAppender
