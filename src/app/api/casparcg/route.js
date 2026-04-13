@@ -22,14 +22,6 @@ function formatMixerNumber(value) {
   return Number(value).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-function stripExtension(filename) {
-  if (typeof filename !== "string") {
-    return filename;
-  }
-  // Removes the last dot and everything after it, but only if it's not a path separator
-  return filename.replace(/\.[^/.]+$/, "");
-}
-
 function sendAmcpCommand({ host, port, command }) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
@@ -175,11 +167,9 @@ export async function POST(request) {
     } else if (action === "stop") {
       command = `STOP ${channel}-${layer}`;
     } else if (action === "play") {
-      const clipName = stripExtension(clip);
-      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clipName)}"`;
+      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}"`;
     } else if (action === "playLoop") {
-      const clipName = stripExtension(clip);
-      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clipName)}" LOOP`;
+      command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}" LOOP`;
     } else if (action === "fill") {
       command = getFillCommand(channel, layer, box);
     } else if (action === "playAllLoop") {
@@ -206,9 +196,8 @@ export async function POST(request) {
       const playCommands = playableVideos.map((video) => {
         const videoLayer = parsePositiveInteger(video.layer, 1);
         const videoClip = String(video.clip || "").trim();
-        const clipName = stripExtension(videoClip);
 
-        return `PLAY ${channel}-${videoLayer} "${escapeAmcpValue(clipName)}" LOOP`;
+        return `PLAY ${channel}-${videoLayer} "${escapeAmcpValue(videoClip)}" LOOP`;
       });
       const commands = [...fillCommands, ...playCommands];
 
