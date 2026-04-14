@@ -39,8 +39,54 @@ function formatConnectionError(error, host, port) {
   return `Could not talk to CasparCG at ${host}:${port}${code}: ${message}`;
 }
 
+function isAbsolutePath(p) {
+  return /^[a-zA-Z]:/.test(p) || p.startsWith("/") || p.startsWith("\\");
+}
+
+function resolveRelativePath(initialPath, relativePath) {
+  let base = String(initialPath || "").replace(/[\\/]+$/, "");
+  let rel = String(relativePath || "").replace(/[\\/]+$/, "");
+  if (!base) {
+    return rel;
+  }
+  return `${base}/${rel}`;
+}
+
+function parseXmlTag(xml, tagName) {
+  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, "i");
+  const match = xml.match(regex);
+  return match ? match[1].trim() : "";
+}
+
 function parseInfoPaths(output) {
-  const lines = String(output || "").split(/\r?\n/);
+  const text = String(output || "");
+
+  // Detect XML response format
+  if (text.includes("<paths>") || text.includes("<?xml")) {
+    const paths = {};
+    const initialPath = parseXmlTag(text, "initial-path");
+    const tagNames = ["media-path", "log-path", "data-path", "template-path", "initial-path"];
+
+    for (const tag of tagNames) {
+      const value = parseXmlTag(text, tag);
+      if (!value) {
+        continue;
+      }
+      // Convert tag name like "media-path" to key "media"
+      const key = tag.replace(/-path$/, "");
+
+      if (key === "media" && !isAbsolutePath(value) && initialPath) {
+        paths[key] = resolveRelativePath(initialPath, value);
+      } else {
+        paths[key] = value;
+      }
+    }
+
+    return paths;
+  }
+
+  // Legacy colon-delimited format
+  const lines = text.split(/\r?\n/);
   const paths = {};
 
   for (const line of lines) {
