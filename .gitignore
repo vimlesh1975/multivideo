@@ -19,8 +19,6 @@
 
 # production
 /build
-/installer/Output/
-/installer/tools/
 /winsw/runtime-manifest.json
 
 # misc
