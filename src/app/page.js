@@ -100,7 +100,7 @@ export default function Home() {
   const [videos, setVideos] = useState(defaultVideos);
   const [selectedVideoId, setSelectedVideoId] = useState(defaultVideos[0].id);
   const [, setStatus] = useState("Ready to connect.");
-  const [isBusy, setIsBusy] = useState(false);
+  const [isGlobalBusy, setIsGlobalBusy] = useState(false);
   const [mediaTree, setMediaTree] = useState(null);
   const [mediaRoot, setMediaRoot] = useState(null);
   const [mediaWarning, setMediaWarning] = useState("");
@@ -352,7 +352,6 @@ export default function Home() {
 
   async function sendAction(action, video, extra = {}, options = {}) {
     if (!options.quiet) {
-      setIsBusy(true);
       setStatus("Sending command...");
     }
 
@@ -379,10 +378,6 @@ export default function Home() {
       }
     } catch (error) {
       setStatus(error.message);
-    } finally {
-      if (!options.quiet) {
-        setIsBusy(false);
-      }
     }
   }
 
@@ -391,7 +386,7 @@ export default function Home() {
   }
 
   async function playAllLoop() {
-    setIsBusy(true);
+    setIsGlobalBusy(true);
     setStatus("Sending all videos in loop...");
 
     try {
@@ -414,12 +409,12 @@ export default function Home() {
     } catch (error) {
       setStatus(error.message);
     } finally {
-      setIsBusy(false);
+      setIsGlobalBusy(false);
     }
   }
 
   async function stopAll() {
-    setIsBusy(true);
+    setIsGlobalBusy(true);
     setStatus("Stopping all videos...");
 
     try {
@@ -442,7 +437,7 @@ export default function Home() {
     } catch (error) {
       setStatus(error.message);
     } finally {
-      setIsBusy(false);
+      setIsGlobalBusy(false);
     }
   }
 
@@ -536,7 +531,7 @@ export default function Home() {
       return;
     }
 
-    setIsBusy(true);
+    setIsGlobalBusy(true);
 
     try {
       const parsedState = JSON.parse(await file.text());
@@ -545,7 +540,7 @@ export default function Home() {
       setStatus(`Could not open layout file: ${error.message}`);
     } finally {
       event.target.value = "";
-      setIsBusy(false);
+      setIsGlobalBusy(false);
     }
   }
 
@@ -680,7 +675,7 @@ export default function Home() {
                 type="button"
                 className={styles.loopButton}
                 onClick={playAllLoop}
-                disabled={isBusy}
+                disabled={isGlobalBusy}
               >
                 Play All Loop
               </button>
@@ -688,7 +683,7 @@ export default function Home() {
                 type="button"
                 className={styles.stopAllButton}
                 onClick={stopAll}
-                disabled={isBusy}
+                disabled={isGlobalBusy}
               >
                 Stop All
               </button>
