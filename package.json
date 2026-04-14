@@ -8,7 +8,10 @@
     "start": "next start --hostname 127.0.0.1 --port 15000",
     "lint": "eslint",
     "service:prepare": "npm run build && npm run winsw:download",
-    "winsw:download": "powershell ./winsw/download-winsw.ps1"
+    "winsw:download": "powershell -ExecutionPolicy Bypass -File ./winsw/download-winsw.ps1",
+    "inno:setup": "powershell -ExecutionPolicy Bypass -File ./installer/setup-inno.ps1",
+    "installer:clean": "powershell -ExecutionPolicy Bypass -File ./installer/build-installer.ps1 -CleanOnly",
+    "installer:build": "powershell -ExecutionPolicy Bypass -File ./installer/build-installer.ps1"
   },
   "dependencies": {
     "next": "16.2.3",

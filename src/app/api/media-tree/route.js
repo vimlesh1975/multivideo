@@ -1,11 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getMediaRoot } from "../../../lib/casparcgMediaRoot";
+import {
+  getMediaRoot,
+  normalizeRootPath,
+  setMediaRoot,
+} from "../../../lib/casparcgMediaRoot";
 
 export const runtime = "nodejs";
-
-const DEFAULT_MEDIA_ROOT =
-  process.env.MEDIA_ROOT || path.join(process.cwd(), "public");
 const EXCLUDED_DIRS = new Set([
   "node_modules",
   ".git",
@@ -16,6 +17,14 @@ const EXCLUDED_DIRS = new Set([
   "winsw",
   "Output",
 ]);
+
+function createEmptyTree() {
+  return {
+    name: "Media",
+    type: "folder",
+    children: {},
+  };
+}
 
 async function buildTree(dirPath, relativePath = "") {
   const item = {
@@ -61,20 +70,32 @@ async function buildTree(dirPath, relativePath = "") {
   return item;
 }
 
-export async function GET() {
-  const mediaRoot = getMediaRoot();
+export async function GET(request) {
+  const requestUrl = new URL(request.url);
+  const requestedRoot = requestUrl.searchParams.get("root");
+  const mediaRoot =
+    (typeof requestedRoot === "string" && requestedRoot.trim() !== ""
+      ? normalizeRootPath(requestedRoot)
+      : null) || getMediaRoot();
+
+  if (!mediaRoot) {
+    return Response.json(
+      { error: "CasparCG media root is not available yet." },
+      { status: 400 },
+    );
+  }
 
   try {
+    setMediaRoot(mediaRoot);
     const tree = await buildTree(mediaRoot);
     return Response.json({ tree, root: mediaRoot });
   } catch (error) {
-    return Response.json(
-      {
-        error:
-          error?.message ||
-          `Could not read media tree from ${mediaRoot}`,
-      },
-      { status: 500 },
-    );
+    return Response.json({
+      tree: createEmptyTree(),
+      root: mediaRoot,
+      warning:
+        error?.message ||
+        `Could not read media tree from ${mediaRoot}`,
+    });
   }
 }

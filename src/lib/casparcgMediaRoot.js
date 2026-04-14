@@ -1,18 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const DEFAULT_MEDIA_ROOT =
-  process.env.MEDIA_ROOT ||
-  (process.platform === "win32"
-    ? path.join("C:", "casparcg", "_media")
-    : path.join(process.cwd(), "public"));
 let casparCgMediaRoot = null;
 
-function isPlaceholderPath(value) {
-  return /<[^>]+>/.test(value);
-}
-
-function normalizeRootPath(rootPath) {
+export function normalizeRootPath(rootPath) {
   if (typeof rootPath !== "string") {
     return null;
   }
@@ -22,12 +13,15 @@ function normalizeRootPath(rootPath) {
     return null;
   }
 
-  if (isPlaceholderPath(normalized)) {
-    return null;
-  }
-
+  normalized = normalized.replace(/<[^>]+>/g, "");
   normalized = normalized.replace(/\//g, path.sep);
   normalized = normalized.replace(/["']/g, "");
+  normalized = normalized.replace(/[ \t]+$/g, "");
+  normalized = normalized.replace(/[\\\/]+$/g, "");
+
+  if (normalized === "") {
+    return null;
+  }
 
   try {
     normalized = path.resolve(normalized);
@@ -39,7 +33,15 @@ function normalizeRootPath(rootPath) {
 }
 
 export function getMediaRoot() {
-  return casparCgMediaRoot || DEFAULT_MEDIA_ROOT;
+  if (casparCgMediaRoot) {
+    return casparCgMediaRoot;
+  }
+
+  if (typeof process.env.MEDIA_ROOT === "string" && process.env.MEDIA_ROOT.trim() !== "") {
+    return normalizeRootPath(process.env.MEDIA_ROOT.trim());
+  }
+
+  return null;
 }
 
 export function setMediaRoot(rootPath) {

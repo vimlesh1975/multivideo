@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./page.module.css";
 
-const defaultConnection = {
-  host: "127.0.0.1",
-  port: "5250",
-  channel: "1",
-};
+const DEFAULT_CHANNEL = "1";
 
 const defaultVideos = [
   {
@@ -90,47 +86,138 @@ function normalizeSavedVideos(savedVideos) {
   });
 }
 
+function getClipName(clip) {
+  const normalizedClip = String(clip || "").trim();
+
+  if (normalizedClip === "") {
+    return "No file";
+  }
+
+  return normalizedClip.split(/[\\/]/).filter(Boolean).pop() || normalizedClip;
+}
+
 export default function Home() {
-  const [connection, setConnection] = useState(defaultConnection);
   const [videos, setVideos] = useState(defaultVideos);
   const [selectedVideoId, setSelectedVideoId] = useState(defaultVideos[0].id);
-  const [status, setStatus] = useState("Ready to connect.");
+  const [, setStatus] = useState("Ready to connect.");
   const [isBusy, setIsBusy] = useState(false);
   const [mediaTree, setMediaTree] = useState(null);
   const [mediaRoot, setMediaRoot] = useState(null);
+  const [mediaWarning, setMediaWarning] = useState("");
+  const [isMediaReady, setIsMediaReady] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState(new Set(["Media"]));
   const stageRef = useRef(null);
   const interactionRef = useRef(null);
   const lastLiveSendRef = useRef(0);
-  const { host, port, channel } = connection;
+  const channel = DEFAULT_CHANNEL;
+
+  const fetchMediaList = useCallback(async (rootOverride) => {
+    try {
+      const mediaTreeUrl =
+        typeof rootOverride === "string" && rootOverride.trim() !== ""
+          ? `/api/media-tree?root=${encodeURIComponent(rootOverride.trim())}`
+          : "/api/media-tree";
+      const response = await fetch(mediaTreeUrl);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not fetch media list.");
+      }
+
+      setMediaTree(result.tree);
+      setMediaRoot(result.root || null);
+      setMediaWarning(result.warning || "");
+      setIsMediaReady(true);
+    } catch (error) {
+      console.error("Failed to fetch media list:", error);
+      setMediaTree(null);
+      setIsMediaReady(false);
+      setMediaWarning(error.message || "Could not load media tree.");
+    }
+  }, []);
+
+  const connectAndRefreshMedia = useCallback(async (options = {}) => {
+    const quiet = options.quiet === true;
+
+    try {
+      if (!quiet) {
+        setStatus("Connecting to CasparCG...");
+      }
+
+      setMediaTree(null);
+      setMediaRoot(null);
+      setIsMediaReady(false);
+      setMediaWarning("");
+
+      const testResponse = await fetch("/api/casparcg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "test",
+          channel,
+        }),
+      });
+      const testResult = await testResponse.json();
+
+      if (!testResponse.ok) {
+        throw new Error(testResult.error || "Could not connect to CasparCG.");
+      }
+
+      if (!quiet) {
+        setStatus(`Connected to CasparCG.\n\n${testResult.message}`);
+      }
+
+      const pathsResponse = await fetch("/api/casparcg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "paths",
+          channel,
+        }),
+      });
+      const pathsResult = await pathsResponse.json();
+
+      if (!pathsResponse.ok) {
+        throw new Error(pathsResult.error || "Could not query CasparCG paths.");
+      }
+
+      if (pathsResult.root) {
+        setMediaRoot(pathsResult.root);
+      }
+
+      await fetchMediaList(pathsResult.root);
+
+      if (!quiet) {
+        setStatus(
+          `Connected to CasparCG.\n\n${testResult.message}\n\n${pathsResult.message}`,
+        );
+      }
+    } catch (error) {
+      console.error("Failed to refresh CasparCG paths:", error);
+      setMediaTree(null);
+      setMediaRoot(null);
+      setIsMediaReady(false);
+      setMediaWarning(error.message || "Could not refresh media paths.");
+      if (!quiet) {
+        setStatus(`Connection failed: ${error.message}`);
+      }
+    }
+  }, [channel, fetchMediaList]);
 
   useEffect(() => {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      setStatus("Auto connecting to CasparCG...");
-
       try {
-        const response = await fetch("/api/casparcg", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            action: "test",
-            host,
-            port,
-            channel,
-          }),
-        });
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Auto connect failed.");
+        setStatus("Auto connecting to CasparCG...");
+        await connectAndRefreshMedia({ quiet: true });
+        if (!controller.signal.aborted) {
+          setStatus("Auto connected and media tree loaded.");
         }
-
-        setStatus(`Auto connected.\n\n${result.message}`);
-        await refreshMediaPaths();
       } catch (error) {
         if (error.name !== "AbortError") {
+          setMediaTree(null);
+          setMediaRoot(null);
+          setIsMediaReady(false);
           setStatus(`Auto connect failed: ${error.message}`);
         }
       }
@@ -140,58 +227,7 @@ export default function Home() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [host, port, channel]);
-
-  useEffect(() => {
-    fetchMediaList();
-  }, []);
-
-  async function fetchMediaList() {
-    try {
-      const response = await fetch("/api/media-tree");
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Could not fetch media list.");
-      }
-
-      setMediaTree(result.tree);
-      setMediaRoot(result.root || null);
-    } catch (error) {
-      console.error("Failed to fetch media list:", error);
-      setStatus(`Could not load media tree: ${error.message}`);
-    }
-  }
-
-  async function refreshMediaPaths() {
-    try {
-      const response = await fetch("/api/casparcg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "paths",
-          host,
-          port,
-          channel,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Could not query CasparCG paths.");
-      }
-
-      if (result.root) {
-        setMediaRoot(result.root);
-      }
-
-      await fetchMediaList();
-    } catch (error) {
-      console.error("Failed to refresh CasparCG paths:", error);
-      setStatus(`Could not refresh media paths: ${error.message}`);
-    }
-  }
+  }, [connectAndRefreshMedia]);
 
   function toggleFolder(folderPath) {
     setExpandedFolders((current) => {
@@ -203,12 +239,6 @@ export default function Home() {
       }
       return next;
     });
-  }
-
-  function selectMedia(mediaPath) {
-    if (selectedVideoId) {
-      updateVideo(selectedVideoId, { clip: mediaPath });
-    }
   }
 
   function handleMediaDragStart(event, mediaPath) {
@@ -235,13 +265,6 @@ export default function Home() {
     setSelectedVideoId(videoId);
   }
 
-  function updateConnection(event) {
-    setConnection((current) => ({
-      ...current,
-      [event.target.name]: event.target.value,
-    }));
-  }
-
   function updateVideo(videoId, changes) {
     setVideos((current) =>
       current.map((video) =>
@@ -258,16 +281,6 @@ export default function Home() {
           : video,
       ),
     );
-  }
-
-  function pickFile(event, videoId) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    updateVideo(videoId, { clip: file.name });
   }
 
   function getStagePointer(event) {
@@ -349,9 +362,9 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
-          ...connection,
           layer: video?.layer || "1",
           clip: video?.clip || "",
+          channel,
           ...extra,
         }),
       });
@@ -387,7 +400,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "playAllLoop",
-          ...connection,
+          channel,
           videos,
         }),
       });
@@ -415,7 +428,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "stopAll",
-          ...connection,
+          channel,
           videos,
         }),
       });
@@ -443,7 +456,6 @@ export default function Home() {
         app: "multivideo-casparcg",
         savedAt: new Date().toISOString(),
         version: 1,
-        connection,
         videos,
         selectedVideoId,
       },
@@ -489,16 +501,11 @@ export default function Home() {
   }
 
   async function applyStateFile(parsedState) {
-    const nextConnection = {
-      ...defaultConnection,
-      ...(parsedState.connection || {}),
-    };
     const nextVideos = normalizeSavedVideos(parsedState.videos);
     const nextSelectedVideoId =
       nextVideos.find((video) => video.id === parsedState.selectedVideoId)
         ?.id || nextVideos[0].id;
 
-    setConnection(nextConnection);
     setVideos(nextVideos);
     setSelectedVideoId(nextSelectedVideoId);
     setStatus("Opened layout file. Sending saved videos and positions...");
@@ -508,7 +515,7 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "playAllLoop",
-        ...nextConnection,
+        channel,
         videos: nextVideos,
       }),
     });
@@ -580,6 +587,11 @@ export default function Home() {
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
+  function handleStageAction(event, action, video) {
+    event.stopPropagation();
+    sendAction(action, video);
+  }
+
   function dragBox(event) {
     const interaction = interactionRef.current;
     const nextBox = nextBoxFromPointer(event);
@@ -628,13 +640,16 @@ export default function Home() {
               {mediaRoot ? (
                 <p className={styles.mediaRootPath}>Root: {mediaRoot}</p>
               ) : (
-                <p className={styles.mediaRootPath}>Using default local media root</p>
+                <p className={styles.mediaRootPath}>Waiting for CasparCG media root</p>
               )}
+              {mediaWarning ? (
+                <p className={styles.mediaRootPath}>{mediaWarning}</p>
+              ) : null}
             </div>
             <button
               type="button"
               className={styles.refreshButton}
-              onClick={refreshMediaPaths}
+              onClick={() => connectAndRefreshMedia()}
               title="Refresh Media Paths and Tree"
             >
               🔄
@@ -648,97 +663,18 @@ export default function Home() {
                 path="Media"
                 expandedFolders={expandedFolders}
                 onToggle={toggleFolder}
-                onSelect={selectMedia}
                 onDragStart={handleMediaDragStart}
               />
+            ) : isMediaReady ? (
+              <p className={styles.noMedia}>No media found in CasparCG media folder.</p>
             ) : (
-              <p className={styles.noMedia}>Connecting to CasparCG...</p>
+              <p className={styles.noMedia}>Connect to CasparCG to load the media tree.</p>
             )}
-          </div>
-        </aside>
-
-        <aside className={styles.sidebar}>
-          <div className={styles.header}>
-            <p>CasparCG MP4 Player</p>
-            <h1>Play three looping videos.</h1>
-          </div>
-
-          <section className={styles.videoControls}>
-            {videos.map((video) => (
-              <article
-                className={styles.videoCard}
-                key={video.id}
-                onDragOver={handleVideoDragOver}
-                onDrop={(event) => handleVideoDrop(event, video.id)}
-              >
-                <div className={styles.videoNumber}>
-                  {video.label.replace("Video ", "")}
-                </div>
-
-                <div className={styles.mediaRow}>
-                  <label className={styles.mediaName}>
-                    <span className={styles.visuallyHidden}>
-                      {video.label} CasparCG MP4 path or media name
-                    </span>
-                    <input
-                      value={video.clip}
-                      onChange={(event) =>
-                        updateVideo(video.id, { clip: event.target.value })
-                      }
-                      placeholder="kabhi_kabhi.mp4 or c://casparcg/_media/video.mkv"
-                    />
-                  </label>
-                </div>
-
-                <div className={styles.cardActions}>
-                  <button
-                    type="button"
-                    onClick={() => sendAction("playLoop", video)}
-                    disabled={isBusy}
-                  >
-                    Play
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => sendAction("stop", video)}
-                    disabled={isBusy}
-                  >
-                    Stop
-                  </button>
-                </div>
-              </article>
-            ))}
-          </section>
-
-          <pre className={styles.status}>{status}</pre>
-
-          <div className={styles.grid}>
-            <label>
-              Host
-              <input
-                name="host"
-                value={connection.host}
-                onChange={updateConnection}
-              />
-            </label>
-
-            <label>
-              Port
-              <input
-                name="port"
-                value={connection.port}
-                onChange={updateConnection}
-              />
-            </label>
           </div>
         </aside>
 
         <section className={styles.surfaceSection}>
           <div className={styles.surfaceHeader}>
-            <div>
-              <p>Output Surface</p>
-              <h2>Move and resize each video block.</h2>
-            </div>
             <div className={styles.surfaceActions}>
               <button
                 type="button"
@@ -792,7 +728,26 @@ export default function Home() {
                   zIndex: selectedVideoId === video.id ? 5 : index + 1,
                 }}
               >
-                <span>{video.label}</span>
+                <span className={styles.videoBoxLabel}>
+                  <strong>{video.label}</strong>
+                  <small>{getClipName(video.clip)}</small>
+                </span>
+                <div className={styles.videoBoxActions}>
+                  <button
+                    type="button"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => handleStageAction(event, "playLoop", video)}
+                  >
+                    Play
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => handleStageAction(event, "stop", video)}
+                  >
+                    Stop
+                  </button>
+                </div>
                 {resizeHandles.map((handle) => (
                   <button
                     aria-label={`${video.label} ${handle.label}`}
@@ -814,7 +769,7 @@ export default function Home() {
   );
 }
 
-function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect, onDragStart }) {
+function TreeItem({ item, level, path, expandedFolders, onToggle, onDragStart }) {
   const isExpanded = expandedFolders.has(path);
   const hasChildren = item.children && Object.keys(item.children).length > 0;
 
@@ -831,9 +786,7 @@ function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect, onDr
             ? (event) => onDragStart?.(event, item.path)
             : undefined
         }
-        onClick={() =>
-          item.type === "folder" ? onToggle(path) : onSelect(item.path)
-        }
+        onClick={item.type === "folder" ? () => onToggle(path) : undefined}
       >
         <span className={styles.expander}>
           {item.type === "folder" ? (isExpanded ? "−" : "+") : ""}
@@ -853,7 +806,6 @@ function TreeItem({ item, level, path, expandedFolders, onToggle, onSelect, onDr
               path={`${path}/${name}`}
               expandedFolders={expandedFolders}
               onToggle={onToggle}
-              onSelect={onSelect}
               onDragStart={onDragStart}
             />
           ))}

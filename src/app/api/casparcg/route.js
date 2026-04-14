@@ -1,9 +1,11 @@
 import net from "node:net";
-import { setMediaRoot } from "../../../lib/casparcgMediaRoot";
+import { normalizeRootPath, setMediaRoot } from "../../../lib/casparcgMediaRoot";
 
 export const runtime = "nodejs";
 
 const DEFAULT_TIMEOUT_MS = 5000;
+const CASPARCG_HOST = "127.0.0.1";
+const CASPARCG_PORT = 5250;
 
 function escapeAmcpValue(value) {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
@@ -21,6 +23,20 @@ function parseMixerNumber(value, fallback) {
 
 function formatMixerNumber(value) {
   return Number(value).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function formatConnectionError(error, host, port) {
+  if (!error) {
+    return `Could not talk to CasparCG at ${host}:${port}.`;
+  }
+
+  const code = typeof error.code === "string" ? ` (${error.code})` : "";
+  const message =
+    typeof error.message === "string" && error.message.trim() !== ""
+      ? error.message
+      : "Connection failed.";
+
+  return `Could not talk to CasparCG at ${host}:${port}${code}: ${message}`;
 }
 
 function parseInfoPaths(output) {
@@ -199,19 +215,18 @@ function getFillCommand(channel, layer, box = {}) {
 }
 
 export async function POST(request) {
+  const requestedHost = CASPARCG_HOST;
+  const requestedPort = CASPARCG_PORT;
+
   try {
     const body = await request.json();
     const action = String(body.action || "");
-    const host = String(body.host || "127.0.0.1").trim();
-    const port = parsePositiveInteger(body.port, 5250);
+    const host = CASPARCG_HOST;
+    const port = CASPARCG_PORT;
     const channel = parsePositiveInteger(body.channel, 1);
     const layer = parsePositiveInteger(body.layer, 1);
     const clip = String(body.clip || "").trim();
     const box = body.box || {};
-
-    if (!host) {
-      return Response.json({ error: "Host is required." }, { status: 400 });
-    }
 
     let command;
 
@@ -284,13 +299,14 @@ export async function POST(request) {
 
     if (action === "paths") {
       const paths = parseInfoPaths(reply);
-      const rootPath = findPreferredMediaRoot(paths);
-      const validRoot = rootPath && setMediaRoot(rootPath) ? rootPath : null;
+      const rootPath = normalizeRootPath(findPreferredMediaRoot(paths));
+      const rootAccessible = rootPath ? setMediaRoot(rootPath) : false;
 
       return Response.json({
         message: `Sent: ${command}\n\nCasparCG replied:\n${reply}`,
         paths,
-        root: validRoot,
+        root: rootPath || null,
+        rootAccessible,
       });
     }
 
@@ -299,7 +315,9 @@ export async function POST(request) {
     });
   } catch (error) {
     return Response.json(
-      { error: error.message || "Could not talk to CasparCG." },
+      {
+        error: formatConnectionError(error, requestedHost, requestedPort),
+      },
       { status: 500 },
     );
   }
