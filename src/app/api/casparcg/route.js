@@ -277,15 +277,11 @@ export async function POST(request) {
         message: `Sent:\n${commands.join("\n")}\n\nCasparCG replied:\n${reply}`,
       });
     } else if (action === "stopAll") {
-      const videos = Array.isArray(body.videos) ? body.videos : [];
-      const layers = [
-        ...new Set(videos.map((video) => parsePositiveInteger(video.layer, 1))),
-      ];
-      const commands = layers.map((videoLayer) => `STOP ${channel}-${videoLayer}`);
-      const reply = await sendAmcpCommands({ host, port, commands });
+      const command = `CLEAR ${channel}`;
+      const reply = await sendAmcpCommand({ host, port, command });
 
       return Response.json({
-        message: `Sent:\n${commands.join("\n")}\n\nCasparCG replied:\n${reply}`,
+        message: `Sent: ${command}\n\nCasparCG replied:\n${reply}`,
       });
     } else if (action === "paths") {
       command = "INFO PATHS";

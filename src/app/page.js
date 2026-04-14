@@ -67,23 +67,30 @@ function normalizeSavedVideos(savedVideos) {
     return defaultVideos;
   }
 
-  return defaultVideos.map((defaultVideo) => {
-    const savedVideo =
-      savedVideos.find((video) => video?.id === defaultVideo.id) || {};
+  return savedVideos
+    .filter((video) => video && typeof video.id === "string")
+    .map((savedVideo, index) => {
+      const defaultVideo = defaultVideos.find(
+        (video) => video.id === savedVideo.id,
+      );
+      const fallbackLabel = defaultVideo?.label || `Video ${index + 1}`;
+      const fallbackLayer = defaultVideo?.layer || String(index + 1);
+      const fallbackBox =
+        defaultVideo?.box || { x: 0.05 * index, y: 0.05 * index, width: 0.35, height: 0.35 };
 
-    return {
-      ...defaultVideo,
-      layer:
-        typeof savedVideo.layer === "string"
-          ? savedVideo.layer
-          : defaultVideo.layer,
-      clip:
-        typeof savedVideo.clip === "string"
-          ? savedVideo.clip
-          : defaultVideo.clip,
-      box: normalizeBox(savedVideo.box || defaultVideo.box),
-    };
-  });
+      return {
+        id: savedVideo.id,
+        label:
+          typeof savedVideo.label === "string" ? savedVideo.label : fallbackLabel,
+        layer:
+          typeof savedVideo.layer === "string" ? savedVideo.layer : fallbackLayer,
+        clip:
+          typeof savedVideo.clip === "string"
+            ? savedVideo.clip
+            : defaultVideo?.clip || "",
+        box: normalizeBox(savedVideo.box || fallbackBox),
+      };
+    });
 }
 
 function getClipName(clip) {
@@ -270,6 +277,55 @@ export default function Home() {
       current.map((video) =>
         video.id === videoId ? { ...video, ...changes } : video,
       ),
+    );
+  }
+
+  function getNextVideoLayer() {
+    return String(
+      videos.reduce(
+        (maxLayer, video) => Math.max(maxLayer, Number(video.layer) || 0),
+        0,
+      ) + 1,
+    );
+  }
+
+  function addVideoBlock() {
+    const offset = (videos.length * 0.05) % 0.5;
+    const nextVideo = {
+      id: `video-${Date.now()}`,
+      label: `Video ${videos.length + 1}`,
+      layer: getNextVideoLayer(),
+      clip: "",
+      box: normalizeBox({
+        x: offset,
+        y: offset,
+        width: 0.35,
+        height: 0.35,
+      }),
+    };
+
+    setVideos((current) => [...current, nextVideo]);
+    setSelectedVideoId(nextVideo.id);
+  }
+
+  function deleteSelectedVideoBlock() {
+    if (!selectedVideoId) {
+      return;
+    }
+
+    deleteVideoBlock(selectedVideoId);
+  }
+
+  function deleteVideoBlock(videoId) {
+    const nextVideos = videos.filter((video) => video.id !== videoId);
+
+    if (nextVideos.length === videos.length) {
+      return;
+    }
+
+    setVideos(nextVideos);
+    setSelectedVideoId((current) =>
+      current === videoId ? nextVideos[0]?.id || "" : current,
     );
   }
 
@@ -687,6 +743,16 @@ export default function Home() {
               >
                 Stop All
               </button>
+              <button type="button" onClick={addVideoBlock} disabled={isGlobalBusy}>
+                Add Video Block
+              </button>
+              <button
+                type="button"
+                onClick={deleteSelectedVideoBlock}
+                disabled={isGlobalBusy || !selectedVideoId}
+              >
+                Delete Video Block
+              </button>
               <button type="button" onClick={saveStateFile}>
                 Save File
               </button>
@@ -741,6 +807,16 @@ export default function Home() {
                     onClick={(event) => handleStageAction(event, "stop", video)}
                   >
                     Stop
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      deleteVideoBlock(video.id);
+                    }}
+                  >
+                    Delete
                   </button>
                 </div>
                 {resizeHandles.map((handle) => (
