@@ -128,6 +128,7 @@ export default function Home() {
   const [openedFileName, setOpenedFileName] = useState("");
   const [status, setStatus] = useState("Ready to connect.");
   const [mediaSearchTerm, setMediaSearchTerm] = useState("");
+  const [useSnap, setUseSnap] = useState(true);
   const [isGlobalBusy, setIsGlobalBusy] = useState(false);
   const [mediaTree, setMediaTree] = useState(null);
   const [mediaRoot, setMediaRoot] = useState(null);
@@ -492,7 +493,8 @@ export default function Home() {
 
   function nextBoxFromPointerSnapped(event) {
     const box = nextBoxFromPointer(event);
-    return box ? snapBox(box) : null;
+    if (!box) return null;
+    return useSnap ? snapBox(box) : box;
   }
 
   async function sendAction(action, video, extra = {}, options = {}) {
@@ -853,6 +855,14 @@ export default function Home() {
         <section className={styles.surfaceSection}>
           <div className={styles.surfaceHeader}>
             <div className={styles.surfaceActions}>
+              <label className={styles.snapToggle}>
+                <input
+                  type="checkbox"
+                  checked={useSnap}
+                  onChange={(e) => setUseSnap(e.target.checked)}
+                />
+                Snap to Grid
+              </label>
               <button
                 type="button"
                 className={styles.loopButton}

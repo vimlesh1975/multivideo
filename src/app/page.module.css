@@ -560,4 +560,26 @@
   color: #ffffff;
 }
 
+.snapToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #233342;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  background: #f1f4f9;
+  border: 1px solid #d9deea;
+}
 
+.snapToggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #48bb78;
+  cursor: pointer;
+}
