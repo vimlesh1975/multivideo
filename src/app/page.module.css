@@ -109,20 +109,74 @@
   opacity: 0.62;
 }
 
+.stageWrapper {
+  position: relative;
+  width: calc(100% - 32px);
+  height: calc(100% - 32px);
+  margin-left: 32px;
+  margin-top: 32px;
+  background: #233342;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+.topStrip {
+  position: absolute;
+  top: -32px;
+  left: 0;
+  width: 100%;
+  height: 32px;
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  background: #233342;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.leftStrip {
+  position: absolute;
+  top: 0;
+  left: -32px;
+  width: 32px;
+  height: 100%;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  background: #233342;
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .stage {
   position: relative;
   width: 100%;
-  max-height: 100%;
-  align-self: start;
-  aspect-ratio: 16 / 13.5;
+  height: 100%;
   overflow: hidden;
   background:
     linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
     #1b252d;
-  background-size: 10% 10%;
+  background-size: calc(100% / 14) calc(100% / 7);
   border: 2px solid #233342;
-  border-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.stripLabel {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.topStrip .stripLabel {
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.leftStrip .stripLabel {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .stage::after {
@@ -426,12 +480,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-right: auto;
   padding: 6px 12px;
   background: #f1f4f9;
   border-radius: 6px;
   font-size: 0.86rem;
   color: #233342;
+  margin-left: 4px;
 }
 
 .headerFilename span {

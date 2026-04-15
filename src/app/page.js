@@ -62,6 +62,23 @@ function normalizeBox(box) {
   };
 }
 
+function snapBox(box) {
+  const columns = 14;
+  const rows = 7;
+  
+  const snapX = Math.round(box.x * columns) / columns;
+  const snapY = Math.round(box.y * rows) / rows;
+  const snapW = Math.max(1 / columns, Math.round(box.width * columns) / columns);
+  const snapH = Math.max(1 / rows, Math.round(box.height * rows) / rows);
+
+  return normalizeBox({
+    x: snapX,
+    y: snapY,
+    width: snapW,
+    height: snapH
+  });
+}
+
 function normalizeSavedVideos(savedVideos) {
   if (!Array.isArray(savedVideos)) {
     return defaultVideos;
@@ -407,6 +424,11 @@ export default function Home() {
     });
   }
 
+  function nextBoxFromPointerSnapped(event) {
+    const box = nextBoxFromPointer(event);
+    return box ? snapBox(box) : null;
+  }
+
   async function sendAction(action, video, extra = {}, options = {}) {
     if (!options.quiet) {
       setStatus("Sending command...");
@@ -665,7 +687,7 @@ export default function Home() {
 
   function dragBox(event) {
     const interaction = interactionRef.current;
-    const nextBox = nextBoxFromPointer(event);
+    const nextBox = nextBoxFromPointerSnapped(event);
 
     if (!interaction || !nextBox) {
       return;
@@ -687,7 +709,7 @@ export default function Home() {
 
   function endDrag(event) {
     const interaction = interactionRef.current;
-    const nextBox = nextBoxFromPointer(event);
+    const nextBox = nextBoxFromPointerSnapped(event);
 
     if (interaction && nextBox) {
       const video = videos.find((item) => item.id === interaction.videoId);
@@ -747,12 +769,6 @@ export default function Home() {
         <section className={styles.surfaceSection}>
           <div className={styles.surfaceHeader}>
             <div className={styles.surfaceActions}>
-              {openedFileName && (
-                <div className={styles.headerFilename}>
-                  <span>File:</span>
-                  <strong>{openedFileName}</strong>
-                </div>
-              )}
               <button
                 type="button"
                 className={styles.loopButton}
@@ -791,74 +807,92 @@ export default function Home() {
                   onChange={openStateFile}
                 />
               </label>
+              {openedFileName && (
+                <div className={styles.headerFilename}>
+                  <span>File:</span>
+                  <strong>{openedFileName}</strong>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className={styles.stage} ref={stageRef}>
-            {videos.map((video, index) => (
-              <div
-                className={`${styles.videoBox} ${
-                  selectedVideoId === video.id ? styles.selectedVideoBox : ""
-                }`}
-                key={video.id}
-                onPointerDown={(event) => startDrag(event, video)}
-                onPointerMove={dragBox}
-                onPointerUp={endDrag}
-                onPointerCancel={endDrag}
-                onDragOver={handleVideoDragOver}
-                onDrop={(event) => handleVideoDrop(event, video.id)}
-                style={{
-                  left: `${video.box.x * 100}%`,
-                  top: `${video.box.y * 100}%`,
-                  width: `${video.box.width * 100}%`,
-                  height: `${video.box.height * 100}%`,
-                  zIndex: selectedVideoId === video.id ? 5 : index + 1,
-                }}
-              >
-                <span className={styles.videoBoxLabel}>
-                  <strong>{video.label}</strong>
-                  <small>{getClipName(video.clip)}</small>
-                  {video.playing && <span className={styles.playingIndicator}>● Playing</span>}
-                </span>
-                <div className={styles.videoBoxActions}>
-                  <button
-                    type="button"
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => handleStageAction(event, "playLoop", video)}
-                  >
-                    Play
-                  </button>
-                  <button
-                    type="button"
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => handleStageAction(event, "stop", video)}
-                  >
-                    Stop
-                  </button>
-                  <button
-                    type="button"
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteVideoBlock(video.id);
-                    }}
-                  >
-                    Delete
-                  </button>
+          <div className={styles.stageWrapper}>
+            <div className={styles.topStrip}>
+              {Array.from({ length: 14 }, (_, i) => (
+                <div key={i} className={styles.stripLabel}>{i + 1}</div>
+              ))}
+            </div>
+            <div className={styles.leftStrip}>
+              {Array.from({ length: 7 }, (_, i) => (
+                <div key={i} className={styles.stripLabel}>{i + 1}</div>
+              ))}
+            </div>
+            <div className={styles.stage} ref={stageRef}>
+              {videos.map((video, index) => (
+                <div
+                  className={`${styles.videoBox} ${
+                    selectedVideoId === video.id ? styles.selectedVideoBox : ""
+                  }`}
+                  key={video.id}
+                  onPointerDown={(event) => startDrag(event, video)}
+                  onPointerMove={dragBox}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  onDragOver={handleVideoDragOver}
+                  onDrop={(event) => handleVideoDrop(event, video.id)}
+                  style={{
+                    left: `${video.box.x * 100}%`,
+                    top: `${video.box.y * 100}%`,
+                    width: `${video.box.width * 100}%`,
+                    height: `${video.box.height * 100}%`,
+                    zIndex: selectedVideoId === video.id ? 5 : index + 1,
+                  }}
+                >
+                  <span className={styles.videoBoxLabel}>
+                    <strong>{video.label}</strong>
+                    <small>{getClipName(video.clip)}</small>
+                    {video.playing && <span className={styles.playingIndicator}>● Playing</span>}
+                  </span>
+                  <div className={styles.videoBoxActions}>
+                    <button
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => handleStageAction(event, "playLoop", video)}
+                    >
+                      Play
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => handleStageAction(event, "stop", video)}
+                    >
+                      Stop
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteVideoBlock(video.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  {resizeHandles.map((handle) => (
+                    <button
+                      aria-label={`${video.label} ${handle.label}`}
+                      className={`${styles.resizeHandle} ${styles[handle.name]}`}
+                      key={handle.name}
+                      onPointerDown={(event) =>
+                        startResize(event, video, handle.name)
+                      }
+                      type="button"
+                    />
+                  ))}
                 </div>
-                {resizeHandles.map((handle) => (
-                  <button
-                    aria-label={`${video.label} ${handle.label}`}
-                    className={`${styles.resizeHandle} ${styles[handle.name]}`}
-                    key={handle.name}
-                    onPointerDown={(event) =>
-                      startResize(event, video, handle.name)
-                    }
-                    type="button"
-                  />
-                ))}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
 
