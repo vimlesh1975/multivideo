@@ -127,6 +127,7 @@ export default function Home() {
   const [expandedFolders, setExpandedFolders] = useState(new Set(["Media"]));
   const [openedFileName, setOpenedFileName] = useState("");
   const [status, setStatus] = useState("Ready to connect.");
+  const [mediaSearchTerm, setMediaSearchTerm] = useState("");
   const [isGlobalBusy, setIsGlobalBusy] = useState(false);
   const [mediaTree, setMediaTree] = useState(null);
   const [mediaRoot, setMediaRoot] = useState(null);
@@ -228,6 +229,71 @@ export default function Home() {
       }
     }
   }, [channel, fetchMediaList]);
+
+  const filteredMediaTree = useCallback(() => {
+    if (!mediaTree) return null;
+    const term = mediaSearchTerm.trim().toLowerCase();
+    if (term === "") return mediaTree;
+
+    function filterNode(node) {
+      if (node.type === "file") {
+        return node.name.toLowerCase().includes(term) ? node : null;
+      }
+
+      if (node.type === "folder") {
+        const filteredChildren = {};
+        let hasMatch = node.name.toLowerCase().includes(term);
+
+        if (node.children) {
+          for (const [name, child] of Object.entries(node.children)) {
+            const result = filterNode(child);
+            if (result) {
+              filteredChildren[name] = result;
+              hasMatch = true;
+            }
+          }
+        }
+
+        if (hasMatch) {
+          return {
+            ...node,
+            children: filteredChildren,
+          };
+        }
+      }
+
+      return null;
+    }
+
+    return filterNode(mediaTree);
+  }, [mediaTree, mediaSearchTerm]);
+
+  useEffect(() => {
+    if (mediaSearchTerm.trim() !== "" && mediaTree) {
+      const term = mediaSearchTerm.trim().toLowerCase();
+      const newExpanded = new Set(expandedFolders);
+      
+      function findAndExpand(node, path) {
+        if (node.type === "folder" && node.children) {
+          let childMatched = false;
+          for (const [name, child] of Object.entries(node.children)) {
+            const childPath = `${path}/${name}`;
+            if (child.name.toLowerCase().includes(term) || findAndExpand(child, childPath)) {
+              childMatched = true;
+            }
+          }
+          if (childMatched) {
+            newExpanded.add(path);
+            return true;
+          }
+        }
+        return node.name.toLowerCase().includes(term);
+      }
+      
+      findAndExpand(mediaTree, "Media");
+      setExpandedFolders(newExpanded);
+    }
+  }, [mediaSearchTerm, mediaTree]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -748,10 +814,28 @@ export default function Home() {
               🔄
             </button>
           </div>
+          <div className={styles.mediaSearchContainer}>
+            <input
+              type="text"
+              placeholder="Search media..."
+              className={styles.mediaSearchInput}
+              value={mediaSearchTerm}
+              onChange={(e) => setMediaSearchTerm(e.target.value)}
+            />
+            {mediaSearchTerm && (
+              <button 
+                className={styles.clearSearch} 
+                onClick={() => setMediaSearchTerm("")}
+                title="Clear Search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <div className={styles.mediaTreeContainer}>
             {mediaTree ? (
               <TreeItem
-                item={mediaTree}
+                item={filteredMediaTree() || { name: "Media", type: "folder", children: {} }}
                 level={0}
                 path="Media"
                 expandedFolders={expandedFolders}
