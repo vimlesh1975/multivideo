@@ -106,13 +106,14 @@ function getClipName(clip) {
 export default function Home() {
   const [videos, setVideos] = useState(defaultVideos);
   const [selectedVideoId, setSelectedVideoId] = useState(defaultVideos[0].id);
-  const [, setStatus] = useState("Ready to connect.");
+  const [isMediaReady, setIsMediaReady] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState(new Set(["Media"]));
+  const [openedFileName, setOpenedFileName] = useState("");
+  const [status, setStatus] = useState("Ready to connect.");
   const [isGlobalBusy, setIsGlobalBusy] = useState(false);
   const [mediaTree, setMediaTree] = useState(null);
   const [mediaRoot, setMediaRoot] = useState(null);
   const [mediaWarning, setMediaWarning] = useState("");
-  const [isMediaReady, setIsMediaReady] = useState(false);
-  const [expandedFolders, setExpandedFolders] = useState(new Set(["Media"]));
   const stageRef = useRef(null);
   const interactionRef = useRef(null);
   const lastLiveSendRef = useRef(0);
@@ -432,6 +433,12 @@ export default function Home() {
       if (!options.quiet) {
         setStatus(result.message);
       }
+
+      if (action === "play" || action === "playLoop") {
+        updateVideo(video.id, { playing: true });
+      } else if (action === "stop") {
+        updateVideo(video.id, { playing: false });
+      }
     } catch (error) {
       setStatus(error.message);
     }
@@ -461,6 +468,9 @@ export default function Home() {
         throw new Error(result.error || "Could not play all videos.");
       }
 
+      setVideos((current) =>
+        current.map((v) => ({ ...v, playing: true }))
+      );
       setStatus(result.message);
     } catch (error) {
       setStatus(error.message);
@@ -489,6 +499,9 @@ export default function Home() {
         throw new Error(result.error || "Could not stop all videos.");
       }
 
+      setVideos((current) =>
+        current.map((v) => ({ ...v, playing: false }))
+      );
       setStatus(result.message);
     } catch (error) {
       setStatus(error.message);
@@ -528,7 +541,8 @@ export default function Home() {
         const writable = await fileHandle.createWritable();
         await writable.write(stateFile);
         await writable.close();
-        setStatus("Saved layout file.");
+        setOpenedFileName(fileHandle.name);
+        setStatus(`Saved layout file: ${fileHandle.name}`);
         return;
       } catch (error) {
         if (error.name === "AbortError") {
@@ -548,7 +562,8 @@ export default function Home() {
     link.download = suggestedName;
     link.click();
     URL.revokeObjectURL(url);
-    setStatus("Saved layout file to browser downloads.");
+    setOpenedFileName(suggestedName);
+    setStatus(`Saved layout file: ${suggestedName} (Browser downloads)`);
   }
 
   async function applyStateFile(parsedState) {
@@ -577,6 +592,9 @@ export default function Home() {
     }
 
     const result = await response.json();
+    setVideos((current) =>
+      current.map((v) => ({ ...v, playing: true }))
+    );
     setStatus(`Opened layout file.\n\n${result.message}`);
   }
 
@@ -590,8 +608,10 @@ export default function Home() {
     setIsGlobalBusy(true);
 
     try {
-      const parsedState = JSON.parse(await file.text());
+      const text = await file.text();
+      const parsedState = JSON.parse(text);
       await applyStateFile(parsedState);
+      setOpenedFileName(file.name);
     } catch (error) {
       setStatus(`Could not open layout file: ${error.message}`);
     } finally {
@@ -727,6 +747,12 @@ export default function Home() {
         <section className={styles.surfaceSection}>
           <div className={styles.surfaceHeader}>
             <div className={styles.surfaceActions}>
+              {openedFileName && (
+                <div className={styles.headerFilename}>
+                  <span>File:</span>
+                  <strong>{openedFileName}</strong>
+                </div>
+              )}
               <button
                 type="button"
                 className={styles.loopButton}
@@ -792,6 +818,7 @@ export default function Home() {
                 <span className={styles.videoBoxLabel}>
                   <strong>{video.label}</strong>
                   <small>{getClipName(video.clip)}</small>
+                  {video.playing && <span className={styles.playingIndicator}>● Playing</span>}
                 </span>
                 <div className={styles.videoBoxActions}>
                   <button
