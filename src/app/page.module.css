@@ -62,6 +62,30 @@
   font-weight: 700;
 }
 
+.pageTitle {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.4rem;
+  color: #233342;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.pageTitle span {
+  font-size: 1.6rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.pageTitle small {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #718096;
+  margin-left: 8px;
+  font-family: monospace;
+}
+
 .surfaceHeader h2 {
   margin-top: 3px;
   font-size: 1.18rem;

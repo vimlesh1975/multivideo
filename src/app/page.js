@@ -997,13 +997,15 @@ export default function Home() {
               >
                 Delete Video Block
               </button>
-              <button 
-                type="button" 
-                onClick={actualSaveFile} 
-                className={fileHandle ? styles.saveButtonActive : ""}
-              >
-                {fileHandle ? "Save" : "Save"}
-              </button>
+              {fileHandle && (
+                <button 
+                  type="button" 
+                  onClick={actualSaveFile} 
+                  className={styles.saveButtonActive}
+                >
+                  Save
+                </button>
+              )}
               <button type="button" onClick={saveStateFile}>
                 Save As File
               </button>
