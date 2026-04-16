@@ -104,6 +104,11 @@
   color: #ffffff;
 }
 
+.surfaceActions button.saveButtonActive {
+  background: #316047;
+  border: 2px solid #48bb78;
+}
+
 .surfaceActions button:disabled {
   cursor: wait;
   opacity: 0.62;

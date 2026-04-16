@@ -132,6 +132,7 @@ export default function Home() {
   const [mediaWarning, setMediaWarning] = useState("");
   const [columns, setColumns] = useState(14);
   const [rows, setRows] = useState(7);
+  const [fileHandle, setFileHandle] = useState(null);
   const stageRef = useRef(null);
   const interactionRef = useRef(null);
   const lastLiveSendRef = useRef(0);
@@ -600,7 +601,7 @@ export default function Home() {
   }
 
   async function saveStateFile() {
-    const suggestedName = `multivideo-layout-${new Date()
+    const suggestedName = openedFileName || `multivideo-layout-${new Date()
       .toISOString()
       .slice(0, 19)
       .replaceAll(":", "-")}.json`;
@@ -630,6 +631,7 @@ export default function Home() {
         const writable = await fileHandle.createWritable();
         await writable.write(stateFile);
         await writable.close();
+        setFileHandle(fileHandle);
         setOpenedFileName(fileHandle.name);
         setStatus(`Saved layout file: ${fileHandle.name}`);
         return;
@@ -655,7 +657,53 @@ export default function Home() {
     setStatus(`Saved layout file: ${suggestedName} (Browser downloads)`);
   }
 
-  async function applyStateFile(parsedState) {
+  async function actualSaveFile() {
+    if (!fileHandle) {
+      return saveStateFile();
+    }
+
+    setIsGlobalBusy(true);
+    setStatus("Saving changes...");
+
+    try {
+      const stateFile = JSON.stringify(
+        {
+          app: "multivideo-casparcg",
+          savedAt: new Date().toISOString(),
+          version: 1,
+          videos,
+          selectedVideoId,
+        },
+        null,
+        2,
+      );
+
+      // Verify permission
+      const options = { mode: "readwrite" };
+      if ((await fileHandle.queryPermission(options)) !== "granted") {
+        if ((await fileHandle.requestPermission(options)) !== "granted") {
+          throw new Error("Write permission denied.");
+        }
+      }
+
+      const writable = await fileHandle.createWritable();
+      await writable.write(stateFile);
+      await writable.close();
+      setStatus(`Saved changes to: ${fileHandle.name}`);
+    } catch (error) {
+      if (error.name === "AbortError") {
+        setStatus("Save cancelled.");
+      } else {
+        setStatus(`Could not save changes: ${error.message}`);
+        // Fallback to Save As if the handle is stale or invalid
+        await saveStateFile();
+      }
+    } finally {
+      setIsGlobalBusy(false);
+    }
+  }
+
+  async function applyStateFile(parsedState, handle = null) {
     const nextVideos = normalizeSavedVideos(parsedState.videos);
     const nextSelectedVideoId =
       nextVideos.find((video) => video.id === parsedState.selectedVideoId)
@@ -663,6 +711,10 @@ export default function Home() {
 
     setVideos(nextVideos);
     setSelectedVideoId(nextSelectedVideoId);
+    setFileHandle(handle);
+    if (handle) {
+      setOpenedFileName(handle.name);
+    }
     setStatus("Opened layout file. Sending saved videos and positions...");
 
     const response = await fetch("/api/casparcg", {
@@ -688,6 +740,39 @@ export default function Home() {
   }
 
   async function openStateFile(event) {
+    // If we have access to showOpenFilePicker, use it to get a writable handle
+    if ("showOpenFilePicker" in window) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [
+            {
+              description: "Multivideo layout",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+          multiple: false,
+        });
+
+        setIsGlobalBusy(true);
+        const file = await handle.getFile();
+        const text = await file.text();
+        const parsedState = JSON.parse(text);
+        await applyStateFile(parsedState, handle);
+        setOpenedFileName(file.name);
+        return;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          setStatus("Open cancelled.");
+        } else {
+          setStatus(`Could not open layout file: ${error.message}`);
+        }
+        return;
+      } finally {
+        setIsGlobalBusy(false);
+      }
+    }
+
+    // Fallback for browsers without File System Access API
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -704,7 +789,9 @@ export default function Home() {
     } catch (error) {
       setStatus(`Could not open layout file: ${error.message}`);
     } finally {
-      event.target.value = "";
+      if (event.target) {
+        event.target.value = "";
+      }
       setIsGlobalBusy(false);
     }
   }
@@ -910,10 +997,22 @@ export default function Home() {
               >
                 Delete Video Block
               </button>
+              <button 
+                type="button" 
+                onClick={actualSaveFile} 
+                className={fileHandle ? styles.saveButtonActive : ""}
+              >
+                {fileHandle ? "Save" : "Save"}
+              </button>
               <button type="button" onClick={saveStateFile}>
                 Save As File
               </button>
-              <label className={styles.fileActionButton}>
+              <label className={styles.fileActionButton} onClick={(e) => {
+                if ("showOpenFilePicker" in window) {
+                  e.preventDefault();
+                  openStateFile();
+                }
+              }}>
                 Open File
                 <input
                   className={styles.hiddenFileInput}
