@@ -62,10 +62,7 @@ function normalizeBox(box) {
   };
 }
 
-function snapBox(box) {
-  const columns = 14;
-  const rows = 7;
-  
+function snapBox(box, columns = 14, rows = 7) {
   const snapX = Math.round(box.x * columns) / columns;
   const snapY = Math.round(box.y * rows) / rows;
   const snapW = Math.max(1 / columns, Math.round(box.width * columns) / columns);
@@ -133,6 +130,8 @@ export default function Home() {
   const [mediaTree, setMediaTree] = useState(null);
   const [mediaRoot, setMediaRoot] = useState(null);
   const [mediaWarning, setMediaWarning] = useState("");
+  const [columns, setColumns] = useState(14);
+  const [rows, setRows] = useState(7);
   const stageRef = useRef(null);
   const interactionRef = useRef(null);
   const lastLiveSendRef = useRef(0);
@@ -494,7 +493,7 @@ export default function Home() {
   function nextBoxFromPointerSnapped(event) {
     const box = nextBoxFromPointer(event);
     if (!box) return null;
-    return useSnap ? snapBox(box) : box;
+    return useSnap ? snapBox(box, columns, rows) : box;
   }
 
   async function sendAction(action, video, extra = {}, options = {}) {
@@ -863,6 +862,28 @@ export default function Home() {
                 />
                 Snap to Grid
               </label>
+              <div className={styles.gridDimensionControls}>
+                <label className={styles.dimensionInput}>
+                  <span>Cols</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={columns}
+                    onChange={(e) => setColumns(Math.max(1, parseInt(e.target.value) || 1))}
+                  />
+                </label>
+                <label className={styles.dimensionInput}>
+                  <span>Rows</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={rows}
+                    onChange={(e) => setRows(Math.max(1, parseInt(e.target.value) || 1))}
+                  />
+                </label>
+              </div>
               <button
                 type="button"
                 className={styles.loopButton}
@@ -911,17 +932,23 @@ export default function Home() {
           </div>
 
           <div className={styles.stageWrapper}>
-            <div className={styles.topStrip}>
-              {Array.from({ length: 14 }, (_, i) => (
+            <div className={styles.topStrip} style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+              {Array.from({ length: columns }, (_, i) => (
                 <div key={i} className={styles.stripLabel}>{i + 1}</div>
               ))}
             </div>
-            <div className={styles.leftStrip}>
-              {Array.from({ length: 7 }, (_, i) => (
+            <div className={styles.leftStrip} style={{ gridTemplateRows: `repeat(${rows}, 1fr)` }}>
+              {Array.from({ length: rows }, (_, i) => (
                 <div key={i} className={styles.stripLabel}>{i + 1}</div>
               ))}
             </div>
-            <div className={styles.stage} ref={stageRef}>
+            <div 
+              className={styles.stage} 
+              ref={stageRef}
+              style={{
+                backgroundSize: `calc(100% / ${columns}) calc(100% / ${rows})`
+              }}
+            >
               {videos.map((video, index) => (
                 <div
                   className={`${styles.videoBox} ${

@@ -583,3 +583,45 @@
   accent-color: #48bb78;
   cursor: pointer;
 }
+
+.gridDimensionControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dimensionInput {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f1f4f9;
+  border: 1px solid #d9deea;
+  border-radius: 6px;
+  color: #233342;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dimensionInput span {
+  color: #718096;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+}
+
+.dimensionInput input {
+  width: 48px;
+  background: #ffffff;
+  border: 1px solid #d9deea;
+  border-radius: 4px;
+  padding: 2px 4px;
+  color: #233342;
+  font-weight: 700;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.dimensionInput input:focus {
+  border-color: #48bb78;
+}
