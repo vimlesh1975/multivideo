@@ -1,6 +1,6 @@
-# Multivideo CasparCG Controller
+# LED Player (Multivideo CasparCG Controller)
 
-A compact Next.js control surface for playing, positioning, and resizing three media blocks on a CasparCG channel. Now fully self-contained with a Windows Service installer.
+A powerful Next.js control surface for playing, positioning, and resizing dynamic video blocks on a CasparCG channel. Integrated with a customizable grid system and Windows Service installer.
 
 ## Features
 
@@ -11,7 +11,12 @@ A compact Next.js control surface for playing, positioning, and resizing three m
 - **Windows Service Integration**: Runs in the background and starts automatically on boot.
 - **Bundled Node.js Runtime**: Includes Node.js v23.11.1—no separate installation required on target machines.
 - **Live Output Control**: Drag and resize video blocks on a 1920x1080 surface with real-time `MIXER FILL` updates.
-- **Layout Management**: Save and open JSON layout files to quickly restore positions and media paths.
+- **Customizable Grid**: Numeric inputs for horizontal and vertical surface blocks (Cols/Rows) with optional **Snap to Grid** functionality.
+- **Smart Layout Management**: 
+  - **Save**: Overwrite the currently active layout file directly.
+  - **Save As**: Export your configuration to a new JSON file.
+  - **Open**: Restore positions and media paths using the File System Access API.
+- **Build Tracking**: Automated build timestamping displayed in the browser tab for version tracking.
 
 ## Installation & Deployment
 
@@ -52,7 +57,10 @@ If you don't want to use the `.exe` installer:
 2. **Install/Run the app** and open it in your browser.
 3. **Enter Media Path**: Type a file name or full path (e.g., `c:/media/video.mkv` or `overlay.png`).
 4. **Play/Stop**: Control individual layers or use **Play All Loop**.
-5. **Surface Control**: Drag and resize blocks on the "Output Surface" to update CasparCG live.
+5. **Surface Control**: 
+   - Set your destination grid size (e.g., 14x7).
+   - Enable **Snap to Grid** for precise alignment.
+   - Drag and resize blocks on the "Output Surface" to update CasparCG live.
 
 ## Automation Scripts
 
