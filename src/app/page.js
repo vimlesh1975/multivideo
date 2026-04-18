@@ -715,28 +715,7 @@ export default function Home() {
     if (handle) {
       setOpenedFileName(handle.name);
     }
-    setStatus("Opened layout file. Sending saved videos and positions...");
-
-    const response = await fetch("/api/casparcg", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "playAllLoop",
-        channel,
-        videos: nextVideos,
-      }),
-    });
-
-    if (!response.ok) {
-      const result = await response.json();
-      throw new Error(result.error || "Could not play saved layout.");
-    }
-
-    const result = await response.json();
-    setVideos((current) =>
-      current.map((v) => ({ ...v, playing: true }))
-    );
-    setStatus(`Opened layout file.\n\n${result.message}`);
+    setStatus(`Opened layout file: ${handle?.name || "Untitled"}`);
   }
 
   async function openStateFile(event) {
