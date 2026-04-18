@@ -136,7 +136,7 @@ export default function Home() {
   const stageRef = useRef(null);
   const interactionRef = useRef(null);
   const lastLiveSendRef = useRef(0);
-  const channel = DEFAULT_CHANNEL;
+  const [channel, setChannel] = useState(DEFAULT_CHANNEL);
 
   const fetchMediaList = useCallback(async (rootOverride) => {
     try {
@@ -920,6 +920,19 @@ export default function Home() {
         <section className={styles.surfaceSection}>
           <div className={styles.surfaceHeader}>
             <div className={styles.surfaceActions}>
+              <label className={styles.channelSelector}>
+                <span>CH</span>
+                <select
+                  value={channel}
+                  onChange={(e) => setChannel(e.target.value)}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((ch) => (
+                    <option key={ch} value={String(ch)}>
+                      {ch}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className={styles.snapToggle}>
                 <input
                   type="checkbox"
