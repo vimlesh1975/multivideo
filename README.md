@@ -1,3 +1,6 @@
+<img width="1724" height="941" alt="image" src="https://github.com/user-attachments/assets/f0f75047-288a-464f-907e-21b0f12ec4cf" />
+
+
 # LED Player (Multivideo CasparCG Controller)
 
 A powerful Next.js control surface for playing, positioning, and resizing dynamic video blocks on a CasparCG channel. Integrated with a customizable grid system and Windows Service installer.
