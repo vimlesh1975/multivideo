@@ -293,8 +293,16 @@
   cursor: pointer;
 }
 
-.videoBoxActions button:first-child {
+.videoBoxActions button:nth-child(1) {
   background: rgba(49, 96, 71, 0.92);
+}
+
+.videoBoxActions button:nth-child(2) {
+  background: rgba(180, 110, 30, 0.92);
+}
+
+.videoBoxActions button:nth-child(3) {
+  background: rgba(50, 60, 75, 0.92);
 }
 
 .videoBoxActions button:last-child {
@@ -535,6 +543,18 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   animation: pulse 2s infinite;
+}
+
+.pausedIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: #ecc94b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 @keyframes pulse {

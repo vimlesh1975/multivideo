@@ -280,6 +280,8 @@ export async function POST(request) {
       command = "VERSION";
     } else if (action === "stop") {
       command = `STOP ${channel}-${layer}`;
+    } else if (action === "pause") {
+      command = `PAUSE ${channel}-${layer}`;
     } else if (action === "play") {
       command = `PLAY ${channel}-${layer} "${escapeAmcpValue(clip)}"`;
     } else if (action === "playLoop") {

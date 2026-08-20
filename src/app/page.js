@@ -525,9 +525,11 @@ export default function Home() {
       }
 
       if (action === "play" || action === "playLoop") {
-        updateVideo(video.id, { playing: true });
+        updateVideo(video.id, { playing: true, paused: false });
+      } else if (action === "pause") {
+        updateVideo(video.id, { playing: false, paused: true });
       } else if (action === "stop") {
-        updateVideo(video.id, { playing: false });
+        updateVideo(video.id, { playing: false, paused: false });
       }
     } catch (error) {
       setStatus(error.message);
@@ -559,7 +561,7 @@ export default function Home() {
       }
 
       setVideos((current) =>
-        current.map((v) => ({ ...v, playing: true }))
+        current.map((v) => ({ ...v, playing: true, paused: false }))
       );
       setStatus(result.message);
     } catch (error) {
@@ -590,7 +592,7 @@ export default function Home() {
       }
 
       setVideos((current) =>
-        current.map((v) => ({ ...v, playing: false }))
+        current.map((v) => ({ ...v, playing: false, paused: false }))
       );
       setStatus(result.message);
     } catch (error) {
@@ -1066,6 +1068,7 @@ export default function Home() {
                     <strong>{video.label}</strong>
                     <small>{getClipName(video.clip)}</small>
                     {video.playing && <span className={styles.playingIndicator}>● Playing</span>}
+                    {video.paused && <span className={styles.pausedIndicator}>❚❚ Paused</span>}
                   </span>
                   <div className={styles.videoBoxActions}>
                     <button
@@ -1074,6 +1077,13 @@ export default function Home() {
                       onClick={(event) => handleStageAction(event, "playLoop", video)}
                     >
                       Play
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => handleStageAction(event, "pause", video)}
+                    >
+                      Pause
                     </button>
                     <button
                       type="button"
